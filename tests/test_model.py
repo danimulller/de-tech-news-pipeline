@@ -155,8 +155,9 @@ def test_load_removes_observation_that_is_no_longer_valid(df_companies, tmp_path
 
 # One CSV per table, with dates as YYYY-MM-DD
 def test_export_tables_writes_one_csv_per_table(df_companies, tmp_path):
-    tables = make_tables(df_companies, ROWS)
-    export_tables(tables, tmp_path)
+    db_path = tmp_path / "test.duckdb"
+    load_to_duckdb(make_tables(df_companies, ROWS), db_path)
+    export_tables(db_path, tmp_path)
 
     assert sorted(p.name for p in tmp_path.glob("*.csv")) == [
         "dim_company.csv", "fact_arr_observation.csv", "fact_article.csv",
@@ -247,3 +248,33 @@ def test_ai_report_without_matching_articles(df_companies, tmp_path):
 
     assert df_report.empty
     assert list(df_report.columns) == AI_ARTICLES_COLUMNS
+
+
+# The CSV files have every batch loaded so far, not only the last one
+def test_export_has_the_rows_of_all_batches(df_companies, tmp_path):
+    db_path = tmp_path / "test.duckdb"
+
+    load_to_duckdb(make_tables(df_companies, ROWS[:4]), db_path)
+    load_to_duckdb(make_tables(df_companies, ROWS[4:]), db_path)
+    export_tables(db_path, tmp_path)
+
+    df_fact_article = pd.read_csv(tmp_path / "fact_article.csv")
+    df_observation = pd.read_csv(tmp_path / "fact_arr_observation.csv")
+
+    assert df_fact_article["article_id"].tolist() == [f"A{i}" for i in range(1, 9)]
+
+    # Sorted by company, then date: cohere (A5), microsoft (A8), openai (A1, A2)
+    assert df_observation["article_id"].tolist() == ["A5", "A8", "A1", "A2"]
+
+
+# Integer columns with empty values are written as integers (12793), not as floats (12793.0)
+def test_export_writes_integers_without_decimals(df_companies, tmp_path):
+    db_path = tmp_path / "test.duckdb"
+    load_to_duckdb(make_tables(df_companies, ROWS), db_path)
+    export_tables(db_path, tmp_path)
+
+    # Cohere is not in the metadata, so employee_count has an empty value in this table
+    df_dim_company = pd.read_csv(tmp_path / "dim_company.csv", dtype=str)
+
+    assert "12793" in df_dim_company["employee_count"].tolist()
+    assert not df_dim_company["employee_count"].str.contains(r"\.", na=False).any()

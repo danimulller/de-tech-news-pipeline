@@ -39,7 +39,10 @@ def run_pipeline(
     output_dir: Path = PROJECT_ROOT / "data" / "output",
     db_path: Path | None = None,
 ) -> dict:
-    """Run every step and return the model: a dict of table name -> DataFrame.
+    """Run every step and return the model of this run: a dict of table name -> DataFrame.
+
+    The tables in DuckDB and in the CSV files have every batch loaded so far; the returned
+    DataFrames only have the rows built from the input of this run.
 
     Side effects: one CSV per table and ai_articles_enriched.csv in output_dir
     (data/output by default), and the tables loaded into the DuckDB file at db_path
@@ -64,9 +67,9 @@ def run_pipeline(
     # Build the warehouse tables
     tables = build_model(df_enriched_articles, df_companies, ARTICLES_FILE)
 
-    # Write the CSV files and load DuckDB
-    export_tables(tables, output_dir)
+    # Load DuckDB, then write the CSV files from it (they have every batch loaded so far)
     load_to_duckdb(tables, db_path)
+    export_tables(db_path, output_dir)
 
     # The AI report is a query on the DuckDB tables
     df_ai_articles = build_ai_articles_enriched(db_path)
@@ -88,7 +91,9 @@ def log_summary(tables: dict) -> None:
     logger.info("Articles without an ARR observation: %s", reasons or "none")
 
     # Companies that are not in company_metadata.json (dim_company.in_metadata = false)
-    logger.info("Companies not in the metadata: %d", (~tables["dim_company"]["in_metadata"]).sum())
+    df_dim_company = tables["dim_company"]
+    not_in_metadata = df_dim_company.loc[~df_dim_company["in_metadata"], "company_name"].tolist()
+    logger.info("Companies not in the metadata (%d): %s", len(not_in_metadata), ", ".join(not_in_metadata) or "none")
 
 
 def main() -> None:

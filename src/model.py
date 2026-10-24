@@ -53,13 +53,18 @@ FACT_ARTICLE_COLUMNS = [
     "summary", "url", "author", "word_count", "company_age",
 ]
 
-FACT_ARR_OBSERVATION_COLUMNS = ["article_id", "company_id", "as_of_date", "arr_usd", "arr_raw"]
-
 # Tables in the order they are loaded (the key of each one is used to replace its rows)
 TABLE_KEYS = {
     "dim_company": "company_id",
     "fact_article": "article_id",
     "fact_arr_observation": "article_id",
+}
+
+# How each table is sorted in its CSV file, so the files never change order between runs
+TABLE_ORDER_BY = {
+    "dim_company": "company_id",
+    "fact_article": "article_id",
+    "fact_arr_observation": "company_id, as_of_date, article_id",
 }
 
 # AI report: articles published between these years (both included) with ARR above this value (USD)
@@ -250,11 +255,25 @@ def load_to_duckdb(tables: dict, db_path: str) -> None:
         con.close()
 
 
-def export_tables(tables: dict, output_dir: str) -> None:
-    """Write each table to its own CSV file (output_dir/<table name>.csv)."""
+def export_tables(db_path: str, output_dir: str) -> None:
+    """Write each table of the DuckDB database to its own CSV file (output_dir/<table name>.csv).
 
-    for table, df_table in tables.items():
-        df_table.to_csv(f"{output_dir}/{table}.csv", index=False, date_format="%Y-%m-%d")
+    The tables are read from the database, not from the last batch, so the CSV files always
+    have every row loaded so far, no matter how many batches were run.
+    """
+
+    con = duckdb.connect(str(db_path), read_only=True)
+
+    try:
+        for table, order_by in TABLE_ORDER_BY.items():
+            df_table = con.execute(f"SELECT * FROM {table} ORDER BY {order_by}").df()
+
+            # Integer columns with empty values come as floats (12.0), so they go back to integers
+            df_table = df_table.convert_dtypes()
+            df_table.to_csv(f"{output_dir}/{table}.csv", index=False, date_format="%Y-%m-%d")
+
+    finally:
+        con.close()
 
 
 def build_ai_articles_enriched(db_path: str) -> pd.DataFrame:

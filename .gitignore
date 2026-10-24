@@ -2,3 +2,9 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+.coverage
+.ipynb_checkpoints/
+*.duckdb.wal
+.DS_Store
+YipitData__Data_Engineering_Assignment_July_2026.pdf
+.vscode/

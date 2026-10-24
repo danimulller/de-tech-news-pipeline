@@ -97,3 +97,27 @@ def test_run_pipeline_reads_na_as_text(data_dir, tmp_path):
 
     assert df_fact_article.loc["ART3", "revenue_raw"] == "N/A"
     assert df_fact_article.loc["ART3", "arr_parse_status"] == "undisclosed"
+
+
+# A second batch is added to the first one: the database and the CSV files have both
+def test_run_pipeline_with_two_batches(data_dir, tmp_path):
+    output_dir = tmp_path / "output"
+    second_dir = tmp_path / "second_batch"
+    second_dir.mkdir()
+    (second_dir / "company_metadata.json").write_text(json.dumps(METADATA))
+    (second_dir / "tech_news.csv").write_text(
+        "article_id,title,company_name,published_date,category,revenue,summary,url,author,word_count\n"
+        "ART5,Fifth,Tesla,2024-01-10,AI/ML,$200M,Summary five,https://x/5,Zoe,50.0\n"
+        "ART2,Second again,Open AI,02/23/2023,Artificial Intelligence,€3B,Summary two,https://x/2,,200.0\n"
+    )
+
+    run_pipeline(data_dir, output_dir)
+    run_pipeline(second_dir, output_dir)
+
+    df_fact_article = pd.read_csv(output_dir / "fact_article.csv")
+    df_observation = pd.read_csv(output_dir / "fact_arr_observation.csv").set_index("article_id")
+
+    # ART1-ART4 from the first batch, ART5 is new, ART2 is not duplicated and has the new value
+    assert df_fact_article["article_id"].tolist() == ["ART1", "ART2", "ART3", "ART4", "ART5"]
+    assert df_observation.loc["ART2", "arr_usd"] == 3_300_000_000
+    assert set(df_observation.index) == {"ART1", "ART2", "ART4", "ART5"}

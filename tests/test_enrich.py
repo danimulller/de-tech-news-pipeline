@@ -1,9 +1,12 @@
+import json
+
 import pandas as pd
 import pytest
 
 from src.enrich import (
     enrich_articles,
     infer_companies,
+    load_companies,
     normalize_company_name,
     resolve_companies,
     size_category,
@@ -23,6 +26,12 @@ from src.enrich import (
 # Legal suffixes, parentheses and spaces don't change the key
 def test_normalize_company_name(raw, expected):
     assert normalize_company_name(raw) == expected
+
+
+# Without the employee count there is no category (not "Large")
+def test_size_category_without_employee_count():
+    assert size_category(None) is None
+    assert size_category(float("nan")) is None
 
 
 @pytest.mark.parametrize(
@@ -126,3 +135,23 @@ def test_infer_companies(df_companies):
         {"company_id": "cohere", "company_name": "Cohere", "in_metadata": False},
         {"company_id": "hugging_face", "company_name": "Hugging Face", "in_metadata": False},
     ]
+
+
+# Two names that give the same company_id are an error, not a silent overwrite
+def test_load_companies_rejects_repeated_company_id(tmp_path):
+    metadata = {"Scale AI": {"employee_count": 100}, "Scale-AI": {"employee_count": 200}}
+    path = tmp_path / "metadata.json"
+    path.write_text(json.dumps(metadata))
+
+    with pytest.raises(ValueError, match="same company_id"):
+        load_companies(path)
+
+
+# A company without the employee count is loaded, with an empty size category
+def test_load_companies_without_employee_count(tmp_path):
+    path = tmp_path / "metadata.json"
+    path.write_text(json.dumps({"Acme": {"employee_count": None, "industry": "SaaS"}}))
+
+    df_companies = load_companies(path)
+
+    assert pd.isna(df_companies.loc[0, "company_size_category"])

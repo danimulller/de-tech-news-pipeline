@@ -47,8 +47,14 @@ def company_id_from_name(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
 
 
-def size_category(employee_count: int) -> str:
-    """Small below 10,000 employees, Medium from 10,000 to 30,000, Large above 30,000."""
+def size_category(employee_count: int) -> str | None:
+    """Small below 10,000 employees, Medium from 10,000 to 30,000, Large above 30,000.
+
+    There is no category when the employee count is unknown.
+    """
+
+    if pd.isna(employee_count):
+        return None
 
     if employee_count < 10_000:
         return "Small"
@@ -72,6 +78,11 @@ def load_companies(path: str) -> pd.DataFrame:
 
     # Creates company_id for JOIN with .csv
     df_companies["company_id"] = df_companies["company_name"].map(company_id_from_name)
+
+    # Two names with the same slug would share a company_id, so it is better to stop here
+    repeated_ids = df_companies.loc[df_companies["company_id"].duplicated(keep=False), "company_name"].tolist()
+    if repeated_ids:
+        raise ValueError(f"These companies would get the same company_id: {repeated_ids}")
 
     df_companies["company_size_category"] = df_companies["employee_count"].map(size_category)
 

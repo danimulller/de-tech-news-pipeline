@@ -14,7 +14,7 @@ article's published date, converted to USD. See [ARCHITECTURE.md](ARCHITECTURE.m
 | | |
 |---|---|
 | OS | Linux or WSL 2 (Ubuntu 24.04 recommended) |
-| Python | **3.12 or newer** (the pinned `numpy` needs it) |
+| Python | **3.11 or newer** (tested on 3.11, 3.12, 3.13 and 3.14) |
 | Disk | About 300 MB for the dependencies |
 | Memory | Under 1 GB. No GPU |
 | Time | A few seconds per run |
@@ -24,13 +24,13 @@ article's published date, converted to USD. See [ARCHITECTURE.md](ARCHITECTURE.m
 
 Run these steps in order, in a Linux or WSL 2 terminal. Steps 1 and 2 are needed only once.
 
-1. Check that Python is 3.12 or newer:
+1. Check that Python is 3.11 or newer:
 
    ```bash
    python3 --version
    ```
 
-   If it is older (Ubuntu 22.04 comes with Python 3.10), install Python 3.12 or newer before going on.
+   If it is older (Ubuntu 22.04 comes with Python 3.10), install Python 3.11 or newer before going on.
 
 2. Install git and the Python venv package (Ubuntu and WSL; skip it if they are already installed):
 
@@ -71,6 +71,14 @@ Run these steps in order, in a Linux or WSL 2 terminal. Steps 1 and 2 are needed
 
    ```bash
    python -m pytest -q
+   ```
+
+   To also see the test coverage (97% of the lines of `src/`), install the dev dependencies first:
+
+   ```bash
+   pip install -r requirements-dev.txt
+   coverage run --branch --source=src -m pytest -q
+   coverage report -m
    ```
 
 In a new terminal, go to the project folder and run `source .venv/bin/activate` again before steps 6 and 7.
@@ -158,6 +166,6 @@ ARCHITECTURE.md              data model and design decisions
 | Problem | Fix |
 |---|---|
 | `No module named venv` or `ensurepip is not available` | `sudo apt install python3-venv`, then create the environment again |
-| `Requires-Python >=3.12` during `pip install` | Your Python is too old. Install Python 3.12 or newer |
+| `No matching distribution found for pandas==3.1.0` during `pip install` | Your Python is older than 3.11. Install Python 3.11 or newer |
 | `No module named src` | Run the command from the project root (the folder with `src/`), not from inside `src/` |
 | `Could not set lock on file ... tech_news.duckdb` | Another program has the database open, often a notebook. Close its connection or restart its kernel, then run again |

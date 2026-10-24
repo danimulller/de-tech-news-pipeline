@@ -133,6 +133,8 @@ Filtering by date, category, industry and ARR is a join of `fact_article` and `d
 
 **Idempotent load.** For each table, the rows with the same key as the new batch are deleted and
 inserted again, in one transaction. The same data gives the same rows and byte-identical CSVs.
+The CSV files are written from the database, not from the last batch, so after several batches
+they have all the rows loaded so far, the same as one run with all the data.
 It also removes stale rows: if an article stops being a valid observation (after a parser fix, for
 example), its old observation disappears. A plain upsert would leave it behind.
 
@@ -171,5 +173,5 @@ Today it is one Python process, two input files and a local DuckDB file. At scal
 - **Monitoring.** The status columns give the checks for free: alert on the share of `unparseable`,
   `invalid`, `unmatched`, `ambiguous_*` and `inferred` rows, on row counts against the previous run, and on
   the same company-day with different values.
-- **Testing.** 90 tests cover the parsers, matching, model, idempotency and the report. Outputs are
+- **Testing.** 96 tests (97% line coverage) cover the parsers, matching, model, idempotency and the report. Outputs are
   deterministic, so a regression shows up as a file diff, and `requirements.txt` pins every version.
