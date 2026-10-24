@@ -1,12 +1,9 @@
-import json
-
 import duckdb
 import pandas as pd
 
 from src.cleaning import clean_articles
 from src.enrich import enrich_articles
 from src.model import build_ai_articles_enriched, build_model, export_tables, load_to_duckdb
-from tests.conftest import fake_embed
 
 RAW_COLUMNS = [
     "article_id", "title", "company_name", "published_date", "category",
@@ -29,7 +26,7 @@ def make_tables(df_companies, rows):
     )
     df_enriched_articles = enrich_articles(clean_articles(df_raw), df_companies)
 
-    return build_model(df_enriched_articles, df_companies, "tech_news.csv", fake_embed)
+    return build_model(df_enriched_articles, df_companies, "tech_news.csv")
 
 
 ROWS = [
@@ -135,7 +132,7 @@ def test_load_is_idempotent(df_companies, tmp_path):
     counts = {t: con.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in tables}
     con.close()
 
-    assert counts == {"dim_company": 6, "fact_article": 8, "fact_arr_observation": 4, "fact_article_embedding": 8}
+    assert counts == {"dim_company": 6, "fact_article": 8, "fact_arr_observation": 4}
 
 
 # An observation that stops being valid is removed on the next load
@@ -162,37 +159,11 @@ def test_export_tables_writes_one_csv_per_table(df_companies, tmp_path):
     export_tables(tables, tmp_path)
 
     assert sorted(p.name for p in tmp_path.glob("*.csv")) == [
-        "dim_company.csv", "fact_arr_observation.csv", "fact_article.csv", "fact_article_embedding.csv",
+        "dim_company.csv", "fact_arr_observation.csv", "fact_article.csv",
     ]
 
     df_observation = pd.read_csv(tmp_path / "fact_arr_observation.csv")
     assert df_observation["as_of_date"].str.match(r"^\d{4}-\d{2}-\d{2}$").all()
-
-
-# One embedding row per article, and 3 similar articles that are never the article itself
-def test_fact_article_embedding(df_companies):
-    tables = make_tables(df_companies, ROWS)
-    df_embedding = tables["fact_article_embedding"]
-
-    assert df_embedding["article_id"].tolist() == tables["fact_article"]["article_id"].tolist()
-
-    for article_id, embedding, top_similar in zip(
-        df_embedding["article_id"], df_embedding["embedding"], df_embedding["top_similar_articles"]
-    ):
-        assert len(embedding) == 8
-        assert len(top_similar) == 3
-        assert len(set(top_similar)) == 3
-        assert article_id not in top_similar
-
-
-# The list columns are written as JSON in the CSV, so they can be read back
-def test_export_writes_list_columns_as_json(df_companies, tmp_path):
-    export_tables(make_tables(df_companies, ROWS), tmp_path)
-
-    df_embedding = pd.read_csv(tmp_path / "fact_article_embedding.csv")
-
-    assert len(json.loads(df_embedding.loc[0, "embedding"])) == 8
-    assert all(a.startswith("A") for a in json.loads(df_embedding.loc[0, "top_similar_articles"]))
 
 
 # (article_id, company, published_date, revenue, category)
@@ -213,7 +184,7 @@ REPORT_ROWS = [
 AI_ARTICLES_COLUMNS = [
     "article_id", "title", "company_name", "published_date", "category", "arr_usd", "summary", "url",
     "industry", "founded_year", "headquarters", "employee_count", "is_public", "stock_ticker",
-    "company_age", "company_size_category", "embedding", "top_similar_articles",
+    "company_age", "company_size_category", "embedding",
 ]
 
 
@@ -261,20 +232,12 @@ def test_ai_report_company_metadata(df_companies, tmp_path):
     assert df_report.loc["R11", "company_name"] == "Cohere"
 
 
-# The embedding and the similar articles are JSON lists in the report
-def test_ai_report_embedding_and_top_similar_articles(df_companies, tmp_path):
-    df_report = make_ai_report(df_companies, tmp_path).set_index("article_id")
+# The embedding column is part of the layout, but it is empty in every row
+def test_ai_report_embedding_is_empty(df_companies, tmp_path):
+    df_report = make_ai_report(df_companies, tmp_path)
 
-    for article_id, row in df_report.iterrows():
-        assert len(json.loads(row["embedding"])) == 8
-
-        top_similar = json.loads(row["top_similar_articles"])
-        assert len(top_similar) == 3
-        assert article_id not in top_similar
-
-    # The neighbors can be any article, even one that is not in the report
-    all_ids = {f"R{i:02d}" for i in range(1, 12)}
-    assert set(json.loads(df_report.loc["R01", "top_similar_articles"])) <= all_ids
+    assert not df_report.empty
+    assert df_report["embedding"].isna().all()
 
 
 # No AI article: an empty report with the same columns, not an error

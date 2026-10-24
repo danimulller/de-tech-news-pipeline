@@ -1,7 +1,5 @@
 import json
-import zlib
 
-import numpy as np
 import pytest
 
 from src.enrich import load_companies
@@ -29,16 +27,3 @@ def df_companies(tmp_path):
     path.write_text(json.dumps(METADATA))
 
     return load_companies(path)
-
-
-def fake_embed(texts):
-    """Stands in for the real model: the same text always gives the same normalized vector."""
-
-    vectors = []
-
-    for text in texts:
-        rng = np.random.default_rng(zlib.crc32(text.encode()))
-        vector = rng.normal(size=8)
-        vectors.append(vector / np.linalg.norm(vector))
-
-    return np.array(vectors, dtype="float32")

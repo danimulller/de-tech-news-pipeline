@@ -4,13 +4,11 @@ Tables (grain -> key):
     dim_company          one row per company                   -> company_id
     fact_article         one row per source article            -> article_id
     fact_arr_observation one row per valid ARR reading         -> article_id
-    fact_article_embedding one row per source article          -> article_id
 
 Relationships:
     fact_article.company_id         -> dim_company.company_id (null if the company was not matched)
     fact_arr_observation.article_id -> fact_article.article_id (source article of the observation)
     fact_arr_observation.company_id -> dim_company.company_id
-    fact_article_embedding.article_id -> fact_article.article_id
 
 Every article lands in fact_article, valid or not. Only articles with a valid ARR,
 a valid date and a company become an observation; the reason for any exclusion is
@@ -34,13 +32,10 @@ or an average). If a company has two readings on the same day, the highest artic
         ORDER BY as_of_date DESC, article_id DESC
     ) = 1
 """
-import json
-
 import duckdb
 import numpy as np
 import pandas as pd
 
-from src.embeddings import build_article_texts, find_top_similar
 from src.enrich import infer_companies
 
 # Columns of each table, in the order they are written to the CSV files
@@ -65,14 +60,7 @@ TABLE_KEYS = {
     "dim_company": "company_id",
     "fact_article": "article_id",
     "fact_arr_observation": "article_id",
-    "fact_article_embedding": "article_id",
 }
-
-# Columns that hold a list; in the CSV files they are written as JSON, e.g. [0.1, 0.2]
-LIST_COLUMNS = ["embedding", "top_similar_articles"]
-
-# How many similar articles are kept for each article
-TOP_SIMILAR_ARTICLES = 3
 
 # AI report: articles published between these years (both included) with ARR above this value (USD)
 AI_REPORT_FIRST_YEAR, AI_REPORT_LAST_YEAR = 2022, 2024
@@ -125,12 +113,6 @@ CREATE TABLE IF NOT EXISTS fact_arr_observation (
     as_of_date DATE    NOT NULL,
     arr_usd    BIGINT  NOT NULL,
     arr_raw    VARCHAR NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS fact_article_embedding (
-    article_id           VARCHAR PRIMARY KEY,
-    embedding            FLOAT[] NOT NULL,
-    top_similar_articles VARCHAR[] NOT NULL
 );
 """
 
@@ -211,30 +193,8 @@ def build_fact_arr_observation(df_fact_article: pd.DataFrame) -> pd.DataFrame:
     return df_fact_arr_observation.reset_index(drop=True)
 
 
-def build_fact_article_embedding(df_fact_article: pd.DataFrame, embed) -> pd.DataFrame:
-    """One row per article: the embedding of title + summary and the ids of the 3 most similar articles.
-
-    embed is the function that turns a list of texts into vectors (see src/embeddings.py).
-    """
-
-    article_ids = df_fact_article["article_id"].tolist()
-
-    # The vectors are normalized, so the cosine similarity between two articles is a dot product
-    embeddings = embed(build_article_texts(df_fact_article))
-    top_similar_articles = find_top_similar(embeddings, article_ids, TOP_SIMILAR_ARTICLES)
-
-    # Rounded to 6 decimals to keep the files small and equal on every run
-    return pd.DataFrame({
-        "article_id": article_ids,
-        "embedding": [[round(float(value), 6) for value in vector] for vector in embeddings],
-        "top_similar_articles": top_similar_articles,
-    })
-
-
-def build_model(
-    df_enriched_articles: pd.DataFrame, df_companies: pd.DataFrame, source_file: str, embed
-) -> dict:
-    """Build the four tables, as a dict of table name -> DataFrame."""
+def build_model(df_enriched_articles: pd.DataFrame, df_companies: pd.DataFrame, source_file: str) -> dict:
+    """Build the three tables, as a dict of table name -> DataFrame."""
 
     df_fact_article = build_fact_article(df_enriched_articles, source_file)
 
@@ -245,7 +205,6 @@ def build_model(
         "dim_company": build_dim_company(df_companies, df_inferred_companies),
         "fact_article": df_fact_article,
         "fact_arr_observation": build_fact_arr_observation(df_fact_article),
-        "fact_article_embedding": build_fact_article_embedding(df_fact_article, embed),
     }
 
 
@@ -295,25 +254,7 @@ def export_tables(tables: dict, output_dir: str) -> None:
     """Write each table to its own CSV file (output_dir/<table name>.csv)."""
 
     for table, df_table in tables.items():
-        df_table.pipe(lists_to_json).to_csv(f"{output_dir}/{table}.csv", index=False, date_format="%Y-%m-%d")
-
-
-def lists_to_json(df_table: pd.DataFrame) -> pd.DataFrame:
-    """Copy of the table with the list columns written as JSON text, so the CSV can be read back."""
-
-    df_json = df_table.copy()
-
-    for column in LIST_COLUMNS:
-        if column in df_json:
-            df_json[column] = df_json[column].map(lambda values: json.dumps([_to_python(v) for v in values]))
-
-    return df_json
-
-
-def _to_python(value):
-    """numpy numbers come out of DuckDB; json only accepts plain python numbers and text."""
-
-    return value.item() if isinstance(value, np.generic) else value
+        df_table.to_csv(f"{output_dir}/{table}.csv", index=False, date_format="%Y-%m-%d")
 
 
 def build_ai_articles_enriched(db_path: str) -> pd.DataFrame:
@@ -322,6 +263,9 @@ def build_ai_articles_enriched(db_path: str) -> pd.DataFrame:
     An article is in the report if its category OR the industry of its company is AI / ML,
     it was published between 2022 and 2024, and it has a valid ARR above $50M.
     A valid ARR is a row in fact_arr_observation.
+
+    The embedding column is part of the report layout, but it is always empty: the
+    embeddings are not generated in this version.
     """
 
     con = duckdb.connect(str(db_path), read_only=True)
@@ -331,12 +275,11 @@ def build_ai_articles_enriched(db_path: str) -> pd.DataFrame:
             SELECT art.article_id, art.title, com.company_name, art.published_date, art.category_std as category,
                 art.arr_usd, art.summary, art.url, com.industry, com.founded_year, com.headquarters,
                 com.employee_count, com.is_public, com.stock_ticker, art.company_age, com.company_size_category,
-                emb.embedding, emb.top_similar_articles
+                CAST(NULL AS VARCHAR) AS embedding
             FROM fact_arr_observation obs
             INNER JOIN fact_article art ON art.article_id = obs.article_id
             INNER JOIN dim_company com ON com.company_id = obs.company_id
-            INNER JOIN fact_article_embedding emb ON emb.article_id = obs.article_id
-            WHERE art.category_std = 'AI_ML'
+            WHERE (art.category_std = 'AI_ML' OR com.industry = 'AI/ML')
               AND YEAR(obs.as_of_date) BETWEEN ? AND ?
               AND obs.arr_usd > ?
             ORDER BY art.article_id
@@ -345,4 +288,4 @@ def build_ai_articles_enriched(db_path: str) -> pd.DataFrame:
     finally:
         con.close()
 
-    return lists_to_json(df_ai_articles)
+    return df_ai_articles

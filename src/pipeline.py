@@ -11,7 +11,6 @@ from pathlib import Path
 import pandas as pd
 
 from src.cleaning import clean_articles
-from src.embeddings import embed_texts
 from src.enrich import enrich_articles, load_companies
 from src.model import build_ai_articles_enriched, build_model, export_tables, load_to_duckdb
 
@@ -39,16 +38,12 @@ def run_pipeline(
     data_dir: Path = PROJECT_ROOT / "data",
     output_dir: Path = PROJECT_ROOT / "data" / "output",
     db_path: Path | None = None,
-    embed=embed_texts,
 ) -> dict:
     """Run every step and return the model: a dict of table name -> DataFrame.
 
     Side effects: one CSV per table and ai_articles_enriched.csv in output_dir
     (data/output by default), and the tables loaded into the DuckDB file at db_path
     (output_dir/tech_news.duckdb by default).
-
-    embed is the function that turns a list of texts into vectors. The default uses
-    sentence-transformers; tests pass a fake one so they don't need the model.
 
     Running it again on the same data gives the same files and no duplicates.
     """
@@ -66,8 +61,8 @@ def run_pipeline(
     df_clean_articles = clean_articles(df_raw)
     df_enriched_articles = enrich_articles(df_clean_articles, df_companies)
 
-    # Build the warehouse tables (the embeddings are part of the model)
-    tables = build_model(df_enriched_articles, df_companies, ARTICLES_FILE, embed)
+    # Build the warehouse tables
+    tables = build_model(df_enriched_articles, df_companies, ARTICLES_FILE)
 
     # Write the CSV files and load DuckDB
     export_tables(tables, output_dir)
@@ -105,10 +100,6 @@ def main() -> None:
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-
-    # The libraries that download the model log every request, which hides our own messages
-    for noisy_logger in ("httpx", "httpx2", "httpcore", "huggingface_hub", "sentence_transformers"):
-        logging.getLogger(noisy_logger).setLevel(logging.WARNING)
 
     run_pipeline(args.data_dir, args.output_dir)
 
