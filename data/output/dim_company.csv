@@ -1,0 +1,27 @@
+company_id,company_name,industry,founded_year,headquarters,employee_count,is_public,stock_ticker,company_size_category,in_metadata
+airbnb,Airbnb,Data Analytics,1999,"London, UK",19967,False,,Medium,True
+amazon_web_services,Amazon Web Services,SaaS,2015,"Berlin, Germany",27826,False,,Medium,True
+anthropic,Anthropic,FinTech,2006,"San Francisco, CA",43747,False,,Large,True
+cloudflare,Cloudflare,Cybersecurity,1998,"Austin, TX",4422,False,CLOU,Small,True
+cohere,Cohere,,,,,,,,False
+confluent,Confluent,Cloud Computing,1995,"London, UK",3884,False,,Small,True
+databricks,Databricks,Data Analytics,2003,"Berlin, Germany",17962,True,DATA,Medium,True
+datarobot,DataRobot,Cloud Computing,2012,"New York, NY",23471,True,,Medium,True
+elastic,Elastic,Cybersecurity,2016,"San Francisco, CA",24508,True,ELAS,Medium,True
+google_deepmind,Google DeepMind,Data Analytics,2017,"Austin, TX",24274,False,,Medium,True
+hugging_face,Hugging Face,,,,,,,,False
+meta_ai,Meta AI,Data Analytics,2001,"Seattle, WA",20240,True,,Medium,True
+microsoft,Microsoft,Data Analytics,2018,"Austin, TX",48646,False,,Large,True
+mistral_ai,Mistral AI,,,,,,,,False
+mongodb,MongoDB,SaaS,2008,"Austin, TX",16952,False,MONG,Medium,True
+nvidia,NVIDIA,AI/ML,2017,"London, UK",22031,False,,Medium,True
+openai,OpenAI,Data Analytics,2006,"Austin, TX",12793,False,OPEN,Medium,True
+palantir,Palantir,Cloud Computing,2005,"Berlin, Germany",42306,True,,Large,True
+perplexity_ai,Perplexity AI,,,,,,,,False
+scale_ai,Scale AI,AI/ML,2003,"Berlin, Germany",23379,False,,Medium,True
+snowflake,Snowflake,Cloud Computing,2012,"London, UK",49545,True,,Large,True
+spacex,SpaceX,AI/ML,2016,"Berlin, Germany",31018,False,,Large,True
+stripe,Stripe,Data Analytics,2002,"Seattle, WA",36348,True,STRI,Large,True
+tesla,Tesla,Cloud Computing,2008,"London, UK",5691,True,,Small,True
+uber,Uber,FinTech,2015,"San Francisco, CA",10144,False,UBER,Medium,True
+xai,xAI,,,,,,,,False
