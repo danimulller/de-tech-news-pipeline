@@ -21,9 +21,10 @@ article's published date, converted to USD. See [ARCHITECTURE.md](ARCHITECTURE.m
 | Internet | Only to install the dependencies. The pipeline runs offline |
 | Docker | Optional. [Docker Desktop](https://www.docker.com/products/docker-desktop/) can replace the Python setup, see [Running with Docker](#running-with-docker-optional) |
 
-## Installation and running
+## Installation and running (Linux or WSL)
 
-Run these steps in order, in a Linux or WSL 2 terminal. Steps 1 and 2 are needed only once.
+This section is for a **Linux or WSL 2 terminal**. Run the steps in order; steps 1 and 2 are needed only once.
+To use **Docker** instead, go to [Running with Docker](#running-with-docker-optional) below.
 
 On Windows, there is no Linux terminal until WSL is installed. Follow the official
 [Install WSL](https://learn.microsoft.com/windows/wsl/install) guide (it installs Ubuntu by default),
@@ -90,7 +91,7 @@ In a new terminal, go to the project folder and run `source .venv/bin/activate` 
 
 ## Running with Docker (optional)
 
-An alternative to the steps above: no Python setup needed. Install
+An alternative to the Linux/WSL steps above, on Windows, macOS or Linux. No Python setup needed. Install
 [Docker Desktop](https://www.docker.com/products/docker-desktop/), **open it** and wait until it shows
 "Engine running". Then, in a terminal:
 
@@ -121,7 +122,6 @@ To see every file being recreated, delete everything in the output folder and ru
 ```bash
 rm -f data/output/*
 python -m src.pipeline
-git status        # clean: the new CSV files are identical to the versioned ones
 ```
 
 With Docker:
