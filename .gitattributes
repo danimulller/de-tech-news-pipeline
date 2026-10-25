@@ -1,0 +1,5 @@
+# Always LF, also on Windows. With CRLF the generated CSV files would differ from the versioned ones
+* text=auto eol=lf
+
+# The source file is delivered with CRLF line endings: keep it byte for byte, never convert it
+data/tech_news.csv -text

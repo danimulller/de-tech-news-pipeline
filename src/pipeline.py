@@ -3,6 +3,7 @@
 Usage:
     python -m src.pipeline
     python -m src.pipeline --data-dir data --output-dir data/output
+    python -m src.pipeline --db-path /somewhere/else/tech_news.duckdb
 """
 import argparse
 import logging
@@ -102,11 +103,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run the tech news ARR pipeline.")
     parser.add_argument("--data-dir", type=Path, default=PROJECT_ROOT / "data")
     parser.add_argument("--output-dir", type=Path, default=PROJECT_ROOT / "data" / "output")
+
+    # If not set, the DuckDB file is created inside the output dir
+    parser.add_argument("--db-path", type=Path, default=None)
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
-    run_pipeline(args.data_dir, args.output_dir)
+    run_pipeline(args.data_dir, args.output_dir, args.db_path)
 
 
 if __name__ == "__main__":

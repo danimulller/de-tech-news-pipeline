@@ -1,0 +1,13 @@
+.git
+.venv
+.vscode
+.pytest_cache
+__pycache__
+*.pyc
+.coverage
+
+# Not needed in the image (data is mounted, the rest is not used)
+data
+notebooks
+*.pdf
+*.md
