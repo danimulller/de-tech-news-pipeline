@@ -4,7 +4,7 @@ import duckdb
 import pandas as pd
 import pytest
 
-from src.pipeline import main, run_pipeline
+from src.pipeline import run_pipeline
 from tests.conftest import METADATA
 
 ARTICLES_CSV = """article_id,title,company_name,published_date,category,revenue,summary,url,author,word_count
@@ -121,20 +121,3 @@ def test_run_pipeline_with_two_batches(data_dir, tmp_path):
     assert df_fact_article["article_id"].tolist() == ["ART1", "ART2", "ART3", "ART4", "ART5"]
     assert df_observation.loc["ART2", "arr_usd"] == 3_300_000_000
     assert set(df_observation.index) == {"ART1", "ART2", "ART4", "ART5"}
-
-
-# The command line can put the DuckDB file outside of the output folder (used by Docker)
-def test_main_with_db_path(data_dir, tmp_path, monkeypatch):
-    output_dir = tmp_path / "output"
-    db_path = tmp_path / "db" / "tech_news.duckdb"
-    db_path.parent.mkdir()
-
-    monkeypatch.setattr("sys.argv", [
-        "pipeline", "--data-dir", str(data_dir), "--output-dir", str(output_dir), "--db-path", str(db_path),
-    ])
-    main()
-
-    # The database is at the chosen path, and the CSV files are in the output folder
-    assert db_path.exists()
-    assert not (output_dir / "tech_news.duckdb").exists()
-    assert (output_dir / "fact_article.csv").exists()

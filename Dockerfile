@@ -1,4 +1,4 @@
-# Image to run the pipeline and the tests (the data folder is mounted by compose.yaml)
+# Image to run the pipeline and the tests (the outputs stay in a Docker volume, see compose.yaml)
 FROM python:3.12-slim
 
 # No .pyc files, and logs show up right away
@@ -11,9 +11,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Code and tests
+# Code, tests and the two input files (the generated data/output is not copied)
 COPY src ./src
 COPY tests ./tests
+COPY data ./data
 
 # Default command: run the pipeline
 CMD ["python", "-m", "src.pipeline"]

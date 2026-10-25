@@ -6,8 +6,10 @@ __pycache__
 *.pyc
 .coverage
 
-# Not needed in the image (data is mounted, the rest is not used)
-data
+# Generated files are not part of the image
+data/output
+
+# Not needed in the image
 notebooks
 *.pdf
 *.md

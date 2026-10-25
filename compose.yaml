@@ -2,15 +2,10 @@ services:
   pipeline:
     build: .
 
-    # Reads the input files from ./data and writes the CSV files to ./data/output
+    # The CSV files and the DuckDB file are written to a Docker volume, not to a Windows folder.
+    # They are kept between runs, so running the pipeline again is safe (no duplicates)
     volumes:
-      - ./data:/app/data
-
-      # The DuckDB file stays in a Docker volume, not in the Windows folder:
-      # DuckDB locks its file, and that can fail on a folder shared with Windows
-      - duckdb:/app/db
-
-    command: python -m src.pipeline --db-path /app/db/tech_news.duckdb
+      - output:/app/data/output
 
 volumes:
-  duckdb:
+  output:
