@@ -2,6 +2,12 @@ services:
   pipeline:
     build: .
 
+    # Runs the pipeline, then keeps the container open so you can look inside it
+    command: ["bash", "-c", "python -m src.pipeline && sleep infinity"]
+
+    # Lets "docker compose stop" end the container right away
+    init: true
+
     # The CSV files and the DuckDB file are written to a Docker volume, not to a Windows folder.
     # They are kept between runs, so running the pipeline again is safe (no duplicates)
     volumes:

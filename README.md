@@ -19,6 +19,7 @@ article's published date, converted to USD. See [ARCHITECTURE.md](ARCHITECTURE.m
 | Memory | Under 1 GB. No GPU |
 | Time | A few seconds per run |
 | Internet | Only to install the dependencies. The pipeline runs offline |
+| Docker | Optional. [Docker Desktop](https://www.docker.com/products/docker-desktop/) can replace the Python setup, see [Running with Docker](#running-with-docker-optional) |
 
 ## Installation and running
 
@@ -86,6 +87,31 @@ then open the Ubuntu terminal and start from step 1.
    ```
 
 In a new terminal, go to the project folder and run `source .venv/bin/activate` again before steps 6 and 7.
+
+## Running with Docker (optional)
+
+An alternative to the steps above: no Python setup needed. Install
+[Docker Desktop](https://www.docker.com/products/docker-desktop/), **open it** and wait until it shows
+"Engine running". Then, in a terminal:
+
+```bash
+git clone https://github.com/danimulller/de-tech-news-pipeline.git
+cd de-tech-news-pipeline
+docker compose up -d --build
+```
+
+This builds the image, runs the pipeline and keeps the container open. The CSV files and the DuckDB file
+stay **inside Docker** (in a volume), not in the project folder.
+
+| Command | What it does |
+|---|---|
+| `docker compose logs` | Shows the pipeline log |
+| `docker compose exec pipeline bash` | Opens a terminal in the container (try `ls data/output`) |
+| `docker compose exec pipeline python -m pytest -q` | Runs the tests |
+| `docker compose cp pipeline:/app/data/output ./docker_output` | Copies the output files to your machine |
+| `docker compose stop` | Stops the container |
+| `docker compose start` | Starts it again (runs the pipeline again, safe) |
+| `docker compose down -v --rmi local` | **Removes everything**: container, output files and image |
 
 ## Regenerating the outputs
 
@@ -164,6 +190,7 @@ src/
   pipeline.py                run_pipeline(): runs all the steps
 tests/                       unit and integration tests
 notebooks/                   exploration notebooks
+Dockerfile, compose.yaml     optional Docker setup
 ARCHITECTURE.md              data model and design decisions
 ```
 
@@ -174,4 +201,5 @@ ARCHITECTURE.md              data model and design decisions
 | `No module named venv` or `ensurepip is not available` | `sudo apt install python3-venv`, then create the environment again |
 | `No matching distribution found for pandas==3.1.0` during `pip install` | Your Python is older than 3.11. Install Python 3.11 or newer |
 | `No module named src` | Run the command from the project root (the folder with `src/`), not from inside `src/` |
+| `failed to connect to the docker API` | Docker Desktop is closed. Open it, wait for "Engine running" and try again |
 | `Could not set lock on file ... tech_news.duckdb` | Another program has the database open, often a notebook. Close its connection or restart its kernel, then run again |

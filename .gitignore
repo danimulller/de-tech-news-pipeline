@@ -9,3 +9,4 @@ __pycache__/
 YipitData__Data_Engineering_Assignment_July_2026.pdf
 .vscode/
 *.duckdb
+docker_output/
