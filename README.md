@@ -115,17 +115,24 @@ stay **inside Docker** (in a volume), not in the project folder.
 
 ## Regenerating the outputs
 
-Running the pipeline again rebuilds every file, and gives **identical results** for the same input.
-It is safe to run as many times as you want: the load replaces rows by key, so nothing is duplicated.
-The CSV files are byte-identical between runs. The `.duckdb` file has the same rows, but its bytes can
-change, so it is not versioned (it is in `.gitignore`) and is created the first time you run the pipeline.
-
-The CSV files are always overwritten. To also start from an empty database, delete it first:
+Running the pipeline again is safe: the same input gives the same CSV files and no duplicate rows.
+To see every file being recreated, delete everything in the output folder and run the pipeline again:
 
 ```bash
-rm data/output/tech_news.duckdb
+rm -f data/output/*
 python -m src.pipeline
+git status        # clean: the new CSV files are identical to the versioned ones
 ```
+
+With Docker:
+
+```bash
+docker compose exec pipeline sh -c "rm -f data/output/*"
+docker compose exec pipeline python -m src.pipeline
+```
+
+The `.duckdb` file is recreated too. It has the same rows, but its bytes can change, so it is not
+versioned (it is in `.gitignore`).
 
 | File in `data/output/` | What it is | Rows |
 |---|---|---|
@@ -157,15 +164,6 @@ EOF
 
 More queries (source article of an observation, latest ARR, quarterly ARR, filters) are in
 [ARCHITECTURE.md](ARCHITECTURE.md#4-lineage-and-queries).
-
-### Use the model from Python
-
-```python
-from src.pipeline import run_pipeline
-
-tables = run_pipeline()                    # runs everything and writes the files
-tables["fact_arr_observation"].head()      # the tables are pandas DataFrames
-```
 
 ### Notebooks (optional)
 
