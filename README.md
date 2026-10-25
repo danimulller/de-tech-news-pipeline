@@ -13,7 +13,7 @@ article's published date, converted to USD. See [ARCHITECTURE.md](ARCHITECTURE.m
 
 | | |
 |---|---|
-| OS | Linux or WSL 2 (Ubuntu 24.04 recommended) |
+| OS | Linux or WSL 2 (Ubuntu 24.04 recommended). On Windows, [install WSL](https://learn.microsoft.com/windows/wsl/install) first |
 | Python | **3.11 or newer** (tested on 3.11, 3.12, 3.13 and 3.14) |
 | Disk | About 300 MB for the dependencies |
 | Memory | Under 1 GB. No GPU |
@@ -23,6 +23,10 @@ article's published date, converted to USD. See [ARCHITECTURE.md](ARCHITECTURE.m
 ## Installation and running
 
 Run these steps in order, in a Linux or WSL 2 terminal. Steps 1 and 2 are needed only once.
+
+On Windows, there is no Linux terminal until WSL is installed. Follow the official
+[Install WSL](https://learn.microsoft.com/windows/wsl/install) guide (it installs Ubuntu by default),
+then open the Ubuntu terminal and start from step 1.
 
 1. Check that Python is 3.11 or newer:
 
@@ -87,6 +91,8 @@ In a new terminal, go to the project folder and run `source .venv/bin/activate` 
 
 Running the pipeline again rebuilds every file, and gives **identical results** for the same input.
 It is safe to run as many times as you want: the load replaces rows by key, so nothing is duplicated.
+The CSV files are byte-identical between runs. The `.duckdb` file has the same rows, but its bytes can
+change, so `git status` may show it as modified after a run.
 
 The CSV files are always overwritten. To also start from an empty database, delete it first:
 
@@ -100,7 +106,7 @@ python -m src.pipeline
 | `dim_company.csv` | One row per company, with metadata | 26 |
 | `fact_article.csv` | One row per source article, raw and cleaned values side by side | 750 |
 | `fact_arr_observation.csv` | One row per valid ARR reading (the ARR over time table) | 558 |
-| `ai_articles_enriched.csv` | AI-related articles, 2022 to 2024, ARR above $50M | 124 |
+| `ai_articles_enriched.csv` | AI-related articles, 2022 to 2024, ARR above $50M. The `embedding` column is always empty (the bonus part is not implemented) | 124 |
 | `tech_news.duckdb` | The three tables in a DuckDB database | |
 
 ## Using the results

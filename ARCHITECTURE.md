@@ -152,6 +152,8 @@ The `embedding` column is part of the layout and is always empty.
   "The Boring Company / SpaceX" to SpaceX. The raw name is always kept.
 - **Companies outside the metadata** have no industry or size, so they reach the AI report
   only through their article category.
+- **`company_age` is in whole years**: the article's published year minus `founded_year`. It is empty when
+  the company has no metadata.
 - **93 dates are guessed** (flagged `ambiguous_assumed_*`) and **FX rates are fixed**, as in the assignment.
 - **Out of scope:** the bonus part (embeddings, similarity and hybrid search).
 
