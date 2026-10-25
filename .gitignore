@@ -8,3 +8,4 @@ __pycache__/
 .DS_Store
 YipitData__Data_Engineering_Assignment_July_2026.pdf
 .vscode/
+*.duckdb
