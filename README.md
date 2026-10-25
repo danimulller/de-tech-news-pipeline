@@ -92,7 +92,7 @@ In a new terminal, go to the project folder and run `source .venv/bin/activate` 
 Running the pipeline again rebuilds every file, and gives **identical results** for the same input.
 It is safe to run as many times as you want: the load replaces rows by key, so nothing is duplicated.
 The CSV files are byte-identical between runs. The `.duckdb` file has the same rows, but its bytes can
-change, so `git status` may show it as modified after a run.
+change, so it is not versioned (it is in `.gitignore`) and is created the first time you run the pipeline.
 
 The CSV files are always overwritten. To also start from an empty database, delete it first:
 
